@@ -1,0 +1,36 @@
+version: '3.9'
+
+services:
+  web:
+    image: dmvaled/bewise
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - PG_CONN_STR=postgresql+psycopg2://tester:bewise_12345@db:5432/quiz
+    entrypoint: [ "/bin/sh","-c" ]
+    command:
+      - |
+        python /code/db/quiz.py
+        uvicorn --reload --host 0.0.0.0 --port 80 main:app
+    ports:
+      - "8000:80"
+
+  db:
+    image: postgres:16.0-bookworm
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=tester
+      - POSTGRES_PASSWORD=bewise_12345
+      - POSTGRES_DB=quiz
+    healthcheck:
+      test: [ "CMD", "sh", "-c", "pg_isready -U $$POSTGRES_USER -h $$(hostname -i)" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "9090:5432"
+
+volumes:
+  postgres_data:
